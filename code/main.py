@@ -4,7 +4,7 @@ from pytmx.util_pygame import load_pygame
 from tile import Tile, CollisionTile
 from player import Player
 from pygame.math import Vector2 as vector
-
+# comm
 
 print("\033[43m main \033[0m")
 
@@ -35,7 +35,6 @@ class Main:
         # groups
         self.all_sprites = All_sprites()
         self.collision_sprites = pygame.sprite.Group()
-        
         
         self.setup()
   

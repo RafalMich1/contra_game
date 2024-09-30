@@ -39,7 +39,7 @@ class Player(pygame.sprite.Sprite):
         if self.direction != 0 and not self.on_floor:
             self.status = self.status.split('_')[0] + '_jump'
             
-        if self.on_floor:
+        if self.on_floor and self.duck and self.direction.x == 0:
             self.status = self.status.split('_')[0] + '_duck'    
             
     def check_contact(self):
