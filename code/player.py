@@ -1,35 +1,33 @@
 import pygame, sys
 from settings import *
 from pygame.math import Vector2 as vector
-from os import walk
+from entity import Entity
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, path, collision_sprites):
-        super().__init__(groups)
+class Player(Entity):
+    def __init__(self, pos, groups, path, collision_sprites, shoot):
+        super().__init__(pos, path, groups, shoot)
         self.import_assets(path)
         self.frame_index = 0
         self.status = 'right'
-        
-        self.image = self.animations[self.status][self.frame_index]
-        # self.image = pygame.Surface((50,90))
 
-        self.rect = self.image.get_rect(topleft = pos)
-        self.z = LAYERS['Level']
-        
-        # float based movement
-        self.direction = vector()
-        self.pos = vector(self.rect.topleft)
-        self.speed = 400
-        
         # collision
-        self.old_rect = self.rect.copy()
         self.collision_sprites = collision_sprites
         
+
+        self.touch_top = False
+        self.touch_bottom = False
         # vartical movement
         self.gravity = 15
-        self.jump_speed = 1700
+        self.jump_speed = 1000
         self.on_floor = False
         self.duck = False
+        
+        self.health = 10
+       
+        self.sound_death = pygame.mixer.Sound('../sound/man-death-scream.mp3')
+        self.sound_death.set_volume(0.3)
+
+
     
     def get_status(self):
 
@@ -49,27 +47,8 @@ class Player(pygame.sprite.Sprite):
             if sprite.rect.colliderect(bottom_rect):
                 if self.direction.y > 0:
                     self.on_floor = True
-
-        
-    def import_assets(self, path):
-        self.animations = {}
-        for index, folder in enumerate(walk(path)):
-            if index == 0:
-                for name in folder[1]:
-                    self.animations[name] = []
-            else:
-                for file_name in sorted(folder[2], key = lambda string: int(string.split('.')[0])):
-                    self.path = folder[0].replace('\\','/') + '/' + file_name
-                    surf = pygame.image.load(self.path).convert_alpha()
-                    key = folder[0].split('\\')[1]
-                    self.animations[key].append(surf)
       
-    def animate(self, dt):
-        self.frame_index += 7 * dt
-        if self.frame_index >= len(self.animations[self.status]):
-            self.frame_index = 0
-        
-        self.image = self.animations[self.status][int(self.frame_index)]
+
         
     def input(self):
         keys = pygame.key.get_pressed()
@@ -77,34 +56,33 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_RIGHT]:
             self.direction.x = 1
             self.status = 'right'
+            if not keys[pygame.K_RIGHT]: self.can_jump = True
+            
         elif keys[pygame.K_LEFT]:
             self.direction.x = -1
             self.status = 'left'
+            if not keys[pygame.K_LEFT]: self.can_jump = True
+            
         else:
             self.direction.x = 0   
             
-        if keys[pygame.K_UP] and self.on_floor == True:
+        if keys[pygame.K_UP] and self.on_floor == True and self.can_jump == True:
             self.on_floor = False
             self.direction.y = -self.jump_speed
-            # if not '_jump' in self.status and not '_duck' in self.status:
-            #     self.status = self.status.replace('_idle','')
-            #     self.status += '_jump'
+            self.can_jump = False
             
         if keys[pygame.K_DOWN]:
             self.duck = True
+            self.can_jump = True
         else:
             self.duck = False
             
-        # if keys[pygame.K_UP]:
-        #     self.direction.y = -1
-
-        # elif keys[pygame.K_DOWN]:
-        #     self.direction.y = 1
-        #     if '_jump' in self.status:
-        #        self.status = self.status.replace('_jump','') 
-        # else:
-        #     self.direction.y = 0
-        # print(self.status)
+        if keys[pygame.K_SPACE]:
+            direction = vector(1,0) if self.status.split('_')[0] == 'right' else vector(-1,0)
+            pos = self.rect.center + direction * 150
+            y_offset = vector(10, -16) if not  "_duck" in self.status else vector(0, 10)
+            self.shoot(pos + y_offset, direction, self)
+            # print('shoot')
     
     def collision(self, direction):
         for sprite in self.collision_sprites.sprites():
@@ -123,14 +101,28 @@ class Player(pygame.sprite.Sprite):
                     if self.rect.bottom >= sprite.rect.top and self.old_rect.bottom <= sprite.old_rect.top:
                         self.rect.bottom = sprite.rect.top
                         self.on_floor = True
+                        # print('bottom collision')
+                        self.touch_bottom = True
+                    else:
+                        self.touch_bottom = False
                         if '_jump' in self.status:
                              self.status = self.status.split('_')[0]
 
                     # top collision
                     if self.rect.top <= sprite.rect.bottom and self.old_rect.top >= sprite.old_rect.bottom:
                         self.rect.top = sprite.rect.bottom
+                        # print('top collision')
+                        self.touch_top = True
+                    else:
+                        self.touch_top = False
+                        
                     self.pos.y = self.rect.y
                     self.direction.y = 0
+                    
+                    # print(self.touch_top, self.touch_bottom)
+                    if not self.touch_top and not self.touch_bottom:
+                        self.sound_death.play()
+                        print("\033[43m Player Die \033[0m")
             
         if self.on_floor and self.direction.y != 0 :
             self.on_floor = False  

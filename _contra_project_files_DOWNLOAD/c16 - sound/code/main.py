@@ -13,7 +13,7 @@ class AllSprites(pygame.sprite.Group):
 		super().__init__()
 		self.display_surface = pygame.display.get_surface()
 		self.offset = vector()
-
+ 
 		# import 
 		self.fg_sky = pygame.image.load('../graphics/sky/fg_sky.png').convert_alpha()
 		self.bg_sky = pygame.image.load('../graphics/sky/bg_sky.png').convert_alpha()
